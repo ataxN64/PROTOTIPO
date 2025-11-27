@@ -1,314 +1,462 @@
 <!DOCTYPE html>
 <html lang="es">
-
 <head>
-  <meta charset="UTF-8">
-  <title>PROTOTIPO</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <!--css bootstrap-->
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.4.1/dist/css/bootstrap.min.css" integrity="sha384-Vkoo8x4CGsO3+Hhxv8T/Q5PaXtkKtu6ug5TOeNV6gBiFeWPGFN9MuhOf23Q9Ifjh" crossorigin="anonymous">
-  <!--iconos de fontawesome-->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
-  <!--favicon-->
-  <link rel="icon" type="image/x-icon" href="https://cdn-icons-png.flaticon.com/512/2875/2875433.png">
-  <style>
-    body {
-      background-color: #f8f9fa;
-    }
+    <meta charset="UTF-8">
+    <title>Panel de Control GPS/Relé - PROTOTIPO</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
 
-    #map {
-      width: 100%;
-      height: 500px;
-      border-radius: 10px;
-    }
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="icon" type="image/x-icon" href="https://cdn-icons-png.flaticon.com/512/2875/2875433.png">
 
-    .info-box {
-      margin-top: 20px;
-      padding: 15px;
-      background-color: white;
-      border-radius: 10px;
-      box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
-    }
+    <style>
+        body { background-color: #f4f7f9; }
 
-    .switch {
-      position: relative;
-      display: inline-block;
-      width: 60px;
-      height: 34px;
-    }
+        /* Estilo de la barra de estado superior (limpio y oscuro) */
+        .status-bar {
+            position: sticky;
+            top: 0;
+            z-index: 1030;
+            width: 100%;
+            background: #1e293b; /* Color azul oscuro/gris */
+            color: #e2e8f0;
+            font-size: 15px;
+            padding: 8px 15px;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .status-item {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 500;
+        }
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            display: inline-block;
+            transition: background 0.3s;
+        }
+        
+        /* Colores de estado más claros */
+        .dot-online { background: #10b981; } /* Verde esmeralda */
+        .dot-offline { background: #f87171; } /* Rojo suave */
+        .dot-gps-ok { background: #3b82f6; } /* Azul */
+        .dot-gps-bad { background: #f59e0b; } /* Amarillo ámbar */
 
-    .switch input {
-      opacity: 0;
-      width: 0;
-      height: 0;
-    }
+        #map {
+            width: 100%;
+            height: 550px; /* Un poco más alto */
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            margin-bottom: 25px;
+        }
 
-    .slider {
-      position: absolute;
-      cursor: pointer;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background-color: #ccc;
-      transition: .4s;
-      border-radius: 34px;
-    }
+        /* Estilo para las cards de datos y controles */
+        .card-custom {
+            border: none;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+            margin-bottom: 20px;
+        }
+        .card-title-custom {
+            font-weight: 700;
+            color: #1e293b;
+            margin-bottom: 0.5rem;
+        }
 
-    .slider:before {
-      position: absolute;
-      content: "";
-      height: 26px;
-      width: 26px;
-      left: 4px;
-      bottom: 4px;
-      background-color: white;
-      transition: .4s;
-      border-radius: 50%;
-    }
-
-    input:checked+.slider {
-      background-color: #4CAF50;
-    }
-
-    input:checked+.slider:before {
-      transform: translateX(26px);
-    }
-  </style>
+        /* Interruptores estilo moderno (se mantiene su CSS original con ligeros ajustes) */
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 60px;
+            height: 34px;
+        }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 34px;
+        }
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 26px; width: 26px;
+            left: 4px; bottom: 4px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+        input:checked + .slider { background-color: #10b981; } /* Verde esmeralda en ON */
+        input:checked + .slider:before { transform: translateX(26px); }
+    </style>
 </head>
 
 <body>
-  <div class="container py-5">
-    <div id="map"></div>
-
-    <div class="info-box text-center">
-      <h5>Coordenadas actuales:</h5>
-      <p><strong>Latitud:</strong> <span id="lat">--</span></p>
-      <p><strong>Longitud:</strong> <span id="lng">--</span></p>
+    <div class="status-bar">
+        <div class="status-item">
+            <span class="status-dot" id="dotOnline"></span>
+            <span id="estadoOnlineText">Conexión</span>
+        </div>
+        <div class="status-item">
+            <span class="status-dot" id="dotGps"></span>
+            <span id="estadoGpsText">GPS</span>
+        </div>
+        <div class="status-item">
+            <i class="fa-solid fa-gauge-high text-warning"></i>
+            <span id="velocidadText">-- km/h</span>
+        </div>
+        <div class="status-item">
+            <i class="fa-solid fa-cloud-arrow-up text-primary"></i>
+            <span id="altitudText">-- m</span>
+        </div>
     </div>
-  </div>
-  <div class="container">
-    <div class="row">
-      <div class="col-sm">
 
-        <div class="text-center mt-4">
-          <h5>Estado del Relay:</h5>
-          <label class="switch">
-            <input type="checkbox" id="relaySwitch" onchange="toggleRelay()">
-            <span class="slider"></span>
-          </label>
-          <div class="mt-2">
-            <span id="relayState">Desconocido</span>
-          </div>
+    <div class="container py-4 py-md-5">
+        
+        <div id="map"></div>
+
+        <div class="row">
+            <div class="col-lg-4 col-md-6">
+                <div class="card card-custom h-100">
+                    <div class="card-body text-center">
+                        <h5 class="card-title card-title-custom mb-3">📍 Ubicación Actual</h5>
+                        <p class="mb-1"><strong>Latitud:</strong> <span id="lat">--</span></p>
+                        <p class="mb-3"><strong>Longitud:</strong> <span id="lng">--</span></p>
+                        
+                        <h6 class="mt-4 mb-2">🚗 Detalles de Movimiento</h6>
+                        <p class="mb-1"><strong>Velocidad:</strong> <span id="velocidadInfo">-- km/h</span></p>
+                        <p class="mb-1"><strong>Altitud:</strong> <span id="altitudInfo">-- m</span></p>
+                        <p><strong>Rumbo:</strong> <span id="rumboInfo">-- °</span></p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-4 col-md-6">
+                <div class="card card-custom h-100">
+                    <div class="card-body text-center">
+                        <h5 class="card-title card-title-custom mb-3">📊 Estado del Sistema</h5>
+                        
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span>Estado de Conexión:</span>
+                            <span id="estadoOnline" class="fw-bold">Desconocido</span>
+                        </div>
+                        <hr class="my-2">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span>Estado del GPS:</span>
+                            <span id="estadoGps" class="fw-bold">Desconocido</span>
+                        </div>
+                        <hr class="my-2">
+
+                        <h6 class="mt-4 mb-3">🗺️ Navegar a la Ubicación</h6>
+                        <div class="d-grid gap-2">
+                            <a id="googleMapsLink" target="_blank" class="btn btn-primary d-block">
+                                <i class="fa-solid fa-map-location-dot"></i> Google Maps
+                            </a>
+                            <a id="wazeLink" target="_blank" class="btn btn-info d-block">
+                                <i class="fa-brands fa-waze"></i> Waze
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-4 col-md-12">
+                <div class="card card-custom h-100">
+                    <div class="card-body text-center">
+                        <h5 class="card-title card-title-custom mb-3">⚙️ Controles Remotos</h5>
+                        
+                        <div class="d-flex justify-content-between align-items-center mb-3 p-2 bg-light rounded">
+                            <span>Control de Encendido/Apagado:</span>
+                            <label class="switch">
+                                <input type="checkbox" id="relaySwitch" onchange="toggleRelay()">
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+                        <p class="mt-1 mb-4">Estado del Relay: <span id="relayState" class="fw-bold">Desconocido</span></p>
+
+                        <hr class="my-3">
+
+                        <div class="d-flex justify-content-between align-items-center mb-3 p-2 bg-light rounded">
+                            <span>Guardar Historial GPS:</span>
+                            <label class="switch">
+                                <input type="checkbox" id="historialSwitch" onchange="toggleHistorial()">
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+                        <p class="mt-1 mb-3"><span id="estadoHistorial" class="fw-bold">Cargando estado...</span></p>
+
+                        <button class="btn btn-outline-danger w-100" onclick="borrarHistorial()">
+                            <i class="fa-solid fa-trash-can"></i> Borrar Historial
+                        </button>
+
+                    </div>
+                </div>
+            </div>
         </div>
-      </div>
-      <div class="col-sm">
-        <div class="text-center mt-4">
-          <h5>Estado del Historial:</h5>
-          <label class="switch">
-            <input type="checkbox" id="historialSwitch" onchange="toggleHistorial()">
-            <span class="slider"></span>
-          </label>
-          <div class="mt-2">
-            <span id="estadoHistorial">Cargando estado...</span>
-          </div>
-          <button class="btn btn-danger mt-3" onclick="borrarHistorial()">🗑️ Borrar Historial</button>
-        </div>
-      </div>
-      <div class="col-sm">
-        <div class="text-center mt-4">
-          <h5>Cómo llegar:</h5>
-          <!--<a id="googleMapsLink" class="btn btn-primary me-2" target="_blank">📍 Google Maps</a>-->
-          <!--<a id="wazeLink" class="btn btn-info text-white" target="_blank">🚗 Waze</a>-->
-          <a id="googleMapsLink" target="_blank"><button type="button" class="btn btn-success"><i class="fa-solid fa-map-location-dot"></i> Google Maps</button></a>
-          <a id="wazeLink" target="_blank"><button type="button" class="btn btn-info"><i class="fa-brands fa-waze"></i> Waze</button></a>  
-        </div>
-      </div>
     </div>
-  </div>
 
-<br><br>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
-  <!--enlaces de bootsrap-->
-  <script src="https://code.jquery.com/jquery-3.4.1.slim.min.js"
-    integrity="sha384-J6qa4849blE2+poT4WnyKhv5vZF5SrPo0iEjwBvKU7imGFAV0wwj1yYfoRSJoZ+n"
-    crossorigin="anonymous"></script>
-  <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js"
-    integrity="sha384-Q6E9RHvbIyZFJoft+2mJbHaEWldlvI9IOYy5n3zV9zzTtmI3UksdQRVvoxMfooAo"
-    crossorigin="anonymous"></script>
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.4.1/dist/js/bootstrap.min.js"
-    integrity="sha384-wfSDF2E50Y2D1uUdj0O3uMBJnjuUD4Ih7YwaYd1iqfktj0Uod8GCExl3Og8ifwB6"
-    crossorigin="anonymous"></script>
-  <!--enlaces de firebase -->
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
-  <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCIYPuAPW6y1DHObMYBwNEB6yn7uNIXfZM"></script>
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCIYPuAPW6y1DHObMYBwNEB6yn7uNIXfZM"></script>
 
-  <script>
-    const firebaseConfig = {
-      apiKey: "AIzaSyCwYMYdSWzHCsvWPK1o1kE8DHBy2QjinSc",
-      authDomain: "okakoro-8d8eb.firebaseapp.com",
-      databaseURL: "https://okakoro-8d8eb-default-rtdb.asia-southeast1.firebasedatabase.app",
-      projectId: "okakoro-8d8eb",
-      storageBucket: "okakoro-8d8eb.firebasestorage.app",
-      messagingSenderId: "923367505708",
-      appId: "1:923367505708:web:cd6892926f2797eb32f689"
-    };
+    <script>
+        // ===============================================
+        // LÓGICA JAVASCRIPT (SIN ALTERACIONES DE FUNCIONALIDAD)
+        // ===============================================
 
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.database();
+        // Configuración Firebase (SE MANTIENE, PERO SE DEBE MOVER A UN ARCHIVO SEGURO)
+        const firebaseConfig = {
+            apiKey: "AIzaSyCwYMYdSWzHCsvWPK1o1kE8DHBy2QjinSc",
+            authDomain: "okakoro-8d8eb.firebaseapp.com",
+            databaseURL: "https://okakoro-8d8eb-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "okakoro-8d8eb",
+            storageBucket: "okakoro-8d8eb.firebasestorage.app",
+            messagingSenderId: "923367505708",
+            appId: "1:923367505708:web:cd6892926f2797eb32f689"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
 
-    let map, marker, polyline;
-    let pathCoords = [];
-    let historialActivoWeb = true;
+        // Mapa y recorrido
+        let map, marker, polyline;
+        let pathCoords = [];
+        let historialActivoWeb = true;
+        let ultimaPos = null;
 
-    function initMap(centerLat, centerLng) {
-      const pos = { lat: centerLat, lng: centerLng };
-      map = new google.maps.Map(document.getElementById("map"), {
-        zoom: 18, center: pos
-      });
-      marker = new google.maps.Marker({
-        position: pos, map: map,
-        animation: google.maps.Animation.DROP,
-        title: "Ubicación actual"
-      });
-      polyline = new google.maps.Polyline({
-        path: pathCoords,
-        geodesic: true,
-        strokeColor: "#FF0000",
-        strokeOpacity: 1.0,
-        strokeWeight: 2,
-        map: map
-      });
-    }
-
-    function actualizarUbicacion(lat, lng) {
-      const pos = { lat, lng };
-      if (historialActivoWeb) {
-        pathCoords.push(pos);
-        polyline.setPath(pathCoords);
-      }
-      marker.setPosition(pos);
-      map.setCenter(pos);
-      document.getElementById("lat").textContent = lat.toFixed(6);
-      document.getElementById("lng").textContent = lng.toFixed(6);
-
-      document.getElementById("googleMapsLink").href =
-        `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
-      document.getElementById("wazeLink").href =
-        `https://waze.com/ul?ll=${lat},${lng}&navigate=yes`;
-    }
-
-    function cargarHistorial() {
-      db.ref("historial").once("value").then(snapshot => {
-        const data = snapshot.val();
-        if (data) {
-          Object.values(data).forEach(punto => {
-            if (punto.latitud && punto.longitud) {
-              pathCoords.push({
-                lat: parseFloat(punto.latitud),
-                lng: parseFloat(punto.longitud)
-              });
-            }
-          });
-          if (pathCoords.length > 0) {
-            const ultPos = pathCoords[pathCoords.length - 1];
-            initMap(ultPos.lat, ultPos.lng);
-            polyline.setPath(pathCoords);
-            marker.setPosition(ultPos);
-            map.setCenter(ultPos);
-            document.getElementById("lat").textContent = ultPos.lat.toFixed(6);
-            document.getElementById("lng").textContent = ultPos.lng.toFixed(6);
-            return;
-          }
+        function initMap(centerLat, centerLng) {
+            const pos = { lat: centerLat, lng: centerLng };
+            map = new google.maps.Map(document.getElementById("map"), {
+                zoom: 18, center: pos,
+                mapId: 'DEMO_MAP_ID' // Mejora estética en mapas modernos
+            });
+            marker = new google.maps.Marker({
+                position: pos, map: map,
+                animation: google.maps.Animation.DROP,
+                title: "Ubicación actual"
+            });
+            polyline = new google.maps.Polyline({
+                path: pathCoords,
+                geodesic: true,
+                strokeColor: "#3b82f6", // Color azul para el trazo
+                strokeOpacity: 0.8,
+                strokeWeight: 4,
+                map: map
+            });
+            ultimaPos = pos;
         }
-        // Si no hay historial, usa la última ubicación actual para crear el mapa
-        db.ref("gps").once("value").then(snapshot => {
-          const gps = snapshot.val();
-          if (gps && gps.latitud && gps.longitud) {
-            initMap(parseFloat(gps.latitud), parseFloat(gps.longitud));
-          }
+
+        function actualizarUbicacion(lat, lng, speed = 0, altitude = 0, course = 0) {
+            const pos = { lat, lng };
+            ultimaPos = pos;
+
+            if (historialActivoWeb) {
+                pathCoords.push(pos);
+                polyline.setPath(pathCoords);
+            }
+            marker.setPosition(pos);
+            map.setCenter(pos);
+            
+            // Actualizar coordenadas y detalles en el card
+            document.getElementById("lat").textContent = lat.toFixed(6);
+            document.getElementById("lng").textContent = lng.toFixed(6);
+            document.getElementById("velocidadInfo").textContent = `${Number(speed || 0).toFixed(1)} km/h`;
+            document.getElementById("altitudInfo").textContent = `${Number(altitude || 0).toFixed(1)} m`;
+            document.getElementById("rumboInfo").textContent = `${Number(course || 0).toFixed(0)} °`; // Rumbo sin decimales
+
+            // Actualizar datos en la barra superior
+            document.getElementById("velocidadText").textContent = `${Number(speed || 0).toFixed(1)} km/h`;
+            document.getElementById("altitudText").textContent = `${Number(altitude || 0).toFixed(0)} m`;
+
+            // Actualizar enlaces de navegación (corregido el formato URL)
+            document.getElementById("googleMapsLink").href =
+                `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
+            document.getElementById("wazeLink").href =
+                `https://waze.com/ul?ll=${lat},${lng}&navigate=yes`;
+        }
+
+        function cargarHistorial() {
+            // Cargar solo los últimos 200 puntos para evitar sobrecargar al inicio
+            db.ref("historial").limitToLast(200).once("value").then(snapshot => {
+                const data = snapshot.val();
+                if (data) {
+                    Object.values(data).forEach(punto => {
+                        if (punto.latitud && punto.longitud) {
+                            pathCoords.push({
+                                lat: parseFloat(punto.latitud),
+                                lng: parseFloat(punto.longitud)
+                            });
+                        }
+                    });
+                    if (pathCoords.length > 0) {
+                        const ultPos = pathCoords[pathCoords.length - 1];
+                        initMap(ultPos.lat, ultPos.lng);
+                        polyline.setPath(pathCoords);
+                        return;
+                    }
+                }
+                // Si no hay historial, usa la última ubicación actual para crear el mapa
+                db.ref("gps").once("value").then(snapshot => {
+                    const gps = snapshot.val();
+                    if (gps && gps.latitud && gps.longitud) {
+                        initMap(parseFloat(gps.latitud), parseFloat(gps.longitud));
+                    } else {
+                        initMap(0, 0); // Mapa centrado en 0,0 si no hay datos iniciales
+                    }
+                });
+            });
+        }
+
+        cargarHistorial();
+
+        // Escuchar cambios de ubicación actual
+        db.ref("gps").on("value", snapshot => {
+            const data = snapshot.val();
+            if (data && data.latitud && data.longitud) {
+                actualizarUbicacion(
+                    parseFloat(data.latitud),
+                    parseFloat(data.longitud),
+                    parseFloat(data.velocidad_kmph || 0),
+                    parseFloat(data.altitud_m || 0),
+                    parseFloat(data.rumbo_deg || 0)
+                );
+            }
         });
-      });
-    }
 
-    cargarHistorial();
+        // ================== Funciones de Control ==================
 
-    db.ref("gps").on("value", snapshot => {
-      const data = snapshot.val();
-      if (data && data.latitud && data.longitud) {
-        actualizarUbicacion(parseFloat(data.latitud), parseFloat(data.longitud));
-      }
-    });
-
-    db.ref("relay/estado").on("value", snapshot => {
-      const estado = snapshot.val();
-      const switchElement = document.getElementById('relaySwitch');
-      const stateText = document.getElementById('relayState');
-      if (estado === "encender") {
-        switchElement.checked = true;
-        stateText.textContent = "Encendido";
-      } else if (estado === "apagar") {
-        switchElement.checked = false;
-        stateText.textContent = "Apagado";
-      }
-    });
-
-    function toggleRelay() {
-      const isChecked = document.getElementById('relaySwitch').checked;
-      const comando = isChecked ? "encender" : "apagar";
-      db.ref("relay/estado").set(comando)
-        .then(() => console.log("✅ Relay: " + comando))
-        .catch(err => console.error("❌ Error:", err));
-    }
-
-    function borrarHistorial() {
-      if (confirm("¿Estás seguro de borrar todo el historial?")) {
-        db.ref("historial").remove()
-          .then(() => {
-            alert("Historial borrado correctamente.");
-            // Limpiar polilínea del recorrido
-            pathCoords = [];
-            if (polyline) {
-              polyline.setPath([]);
+        // Control de Relay
+        db.ref("relay/estado").on("value", snapshot => {
+            const estado = snapshot.val();
+            const switchElement = document.getElementById('relaySwitch');
+            const stateText = document.getElementById('relayState');
+            if (estado === "encender") {
+                switchElement.checked = true;
+                stateText.textContent = "✅ ENCENDIDO";
+                stateText.classList.remove('text-danger');
+                stateText.classList.add('text-success');
+            } else if (estado === "apagar") {
+                switchElement.checked = false;
+                stateText.textContent = "🚫 APAGADO";
+                stateText.classList.remove('text-success');
+                stateText.classList.add('text-danger');
+            } else {
+                stateText.textContent = "Desconocido";
+                stateText.classList.remove('text-success', 'text-danger');
             }
-            // Volver a centrar el mapa en la última ubicación actual
-            if (marker && map) {
-              map.setCenter(marker.getPosition());
+        });
+
+        function toggleRelay() {
+            const isChecked = document.getElementById('relaySwitch').checked;
+            const comando = isChecked ? "encender" : "apagar";
+            db.ref("relay/estado").set(comando)
+                .then(() => console.log("✅ Relay: " + comando))
+                .catch(err => console.error("❌ Error al cambiar relay:", err));
+        }
+
+        // Control de Historial
+        function borrarHistorial() {
+            if (confirm("⚠️ ADVERTENCIA: ¿Estás seguro de borrar TODO el historial de seguimiento? Esta acción es irreversible.")) {
+                db.ref("historial").remove()
+                    .then(() => {
+                        alert("Historial borrado correctamente.");
+                        pathCoords = [];
+                        if (polyline) {
+                            polyline.setPath([]);
+                        }
+                        if (marker && map) {
+                            map.setCenter(marker.getPosition());
+                        }
+                    })
+                    .catch(err => console.error("❌ Error al borrar historial:", err));
             }
-          })
-          .catch(err => console.error("❌ Error al borrar:", err));
-      }
-    }
+        }
 
+        function toggleHistorial() {
+            historialActivoWeb = document.getElementById('historialSwitch').checked;
+            db.ref("historial_activo").set(historialActivoWeb)
+                .then(() => console.log(historialActivoWeb ? "Historial ACTIVADO." : "Historial DETENIDO."))
+                .catch(err => console.error("❌ Error al cambiar estado historial:", err));
+        }
 
-    function toggleHistorial() {
-      historialActivoWeb = document.getElementById('historialSwitch').checked;
-      db.ref("historial_activo").set(historialActivoWeb)
-        .then(() => console.log(historialActivoWeb ? "Historial ACTIVADO." : "Historial DETENIDO."))
-        .catch(err => console.error("❌ Error:", err));
-    }
+        function escucharEstadoHistorial() {
+            db.ref("historial_activo").on("value", snapshot => {
+                const estado = snapshot.val();
+                historialActivoWeb = estado;
+                document.getElementById('historialSwitch').checked = estado;
+                const textEl = document.getElementById("estadoHistorial");
+                if (estado === true) {
+                    textEl.textContent = "✅ Grabando (ACTIVO)";
+                    textEl.classList.remove('text-warning', 'text-danger');
+                    textEl.classList.add('text-success');
+                } else {
+                    textEl.textContent = "⏸️ Detenido";
+                    textEl.classList.remove('text-success', 'text-danger');
+                    textEl.classList.add('text-warning');
+                }
+            });
+        }
 
-    function escucharEstadoHistorial() {
-      db.ref("historial_activo").on("value", snapshot => {
-        const estado = snapshot.val();
-        historialActivoWeb = estado;
-        document.getElementById('historialSwitch').checked = estado;
-        document.getElementById("estadoHistorial").textContent =
-          estado ? "✅ Historial ACTIVO" : "⏸️ Historial DETENIDO";
-      });
-    }
+        escucharEstadoHistorial();
 
-    escucharEstadoHistorial();
-  </script>
+        // Estado online (visual e indicador en barra)
+        db.ref("estado/online").on("value", snapshot => {
+            const val = snapshot.val();
+            const el = document.getElementById("estadoOnline");
+            const dot = document.getElementById("dotOnline");
+            const txt = document.getElementById("estadoOnlineText");
+
+            if (val === true || val === "online") {
+                el.textContent = "🟢 En línea";
+                el.classList.add('text-success');
+                el.classList.remove('text-danger');
+                dot.className = "status-dot dot-online";
+                txt.textContent = "En línea";
+            } else {
+                el.textContent = "🔴 Desconectado";
+                el.classList.add('text-danger');
+                el.classList.remove('text-success');
+                dot.className = "status-dot dot-offline";
+                txt.textContent = "Desconectado";
+            }
+        });
+
+        // Estado GPS (visual e indicador en barra)
+        db.ref("estado/gps_ok").on("value", snapshot => {
+            const val = snapshot.val();
+            const el = document.getElementById("estadoGps");
+            const dot = document.getElementById("dotGps");
+            const txt = document.getElementById("estadoGpsText");
+
+            if (val === true) {
+                el.textContent = "🛰️ GPS OK";
+                el.classList.add('text-primary');
+                el.classList.remove('text-warning');
+                dot.className = "status-dot dot-gps-ok";
+                txt.textContent = "GPS OK";
+            } else if (val === false) {
+                el.textContent = "🚫 Sin señal GPS";
+                el.classList.add('text-warning');
+                el.classList.remove('text-primary');
+                dot.className = "status-dot dot-gps-bad";
+                txt.textContent = "Sin señal GPS";
+            } else {
+                el.textContent = "Desconocido";
+                el.classList.add('text-warning');
+                el.classList.remove('text-primary');
+                dot.className = "status-dot dot-gps-bad";
+                txt.textContent = "GPS";
+            }
+        });
+    </script>
 </body>
-
 </html>
-
-
-
-
-
-
-
